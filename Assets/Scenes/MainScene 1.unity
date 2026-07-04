@@ -2372,6 +2372,8 @@ MonoBehaviour:
   openTrigger: open
   closeTrigger: close
   endUI: {fileID: 0}
+  endUiAnimator: {fileID: 0}
+  endUiOverTrigger: OVER
 --- !u!4 &919936313
 Transform:
   m_ObjectHideFlags: 0
@@ -2495,14 +2497,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dog: {fileID: 1212499361}
-  owner: {fileID: 318676771}
-  dogBias: 0.65
-  baseOffset: {x: 0, y: 8, z: -8}
-  focusHeight: 0.8
-  zoomStartDistance: 2.5
-  zoomPerMeter: 0.8
-  maximumExtraDistance: 3
+  followDistance: 3
+  cameraHeight: 0.8
+  lookHeight: 0.6
   followSmoothTime: 0.18
+  rotationSharpness: 12
   snapOnStart: 1
 --- !u!114 &963194230
 MonoBehaviour:
