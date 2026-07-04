@@ -5,48 +5,48 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class ScoreManager : MonoBehaviour
 {
-    [Header("References")]
-    [SerializeField]
+    [Header("引用")]
+    [SerializeField, InspectorName("关卡管理器")]
     private LevelManager levelManager;
 
-    [SerializeField]
+    [SerializeField, InspectorName("盲道触发器")]
     private BlindPathTrigger blindPathTrigger;
 
-    [SerializeField]
+    [SerializeField, InspectorName("狗狗移动")]
     private DogMovement dogMovement;
 
-    [SerializeField]
+    [SerializeField, InspectorName("主人跟随")]
     private OwnerFollower ownerFollower;
 
-    [Header("Blind Path Score")]
-    [SerializeField, Min(0f)]
+    [Header("盲道得分")]
+    [SerializeField, Min(0f), InspectorName("盲道加分速度（每秒）")]
     private float blindPathScorePerSecond = 10f;
 
-    [SerializeField, Min(0f)]
+    [SerializeField, Min(0f), InspectorName("主人移动速度阈值")]
     private float ownerMovingThreshold = 0.05f;
 
-    [Header("Penalty Values")]
-    [SerializeField, Min(0f)]
+    [Header("扣分数值")]
+    [SerializeField, Min(0f), InspectorName("吸引物扣分")]
     private float attractorPenaltyValue = 20f;
 
-    [SerializeField, Min(0f)]
+    [SerializeField, Min(0f), InspectorName("障碍物扣分")]
     private float obstaclePenaltyValue = 10f;
 
-    [SerializeField, Min(0f)]
+    [SerializeField, Min(0f), InspectorName("压力满值扣分")]
     private float leashPressurePenaltyValue = 20f;
 
-    [Header("Obstacle Detection")]
-    [SerializeField]
+    [Header("障碍物检测")]
+    [SerializeField, InspectorName("障碍物标签")]
     private string obstacleTag = "obstacle";
 
-    [Header("Leash Pressure")]
-    [SerializeField, Min(0f)]
+    [Header("牵引压力")]
+    [SerializeField, Min(0f), InspectorName("压力值上限")]
     private float leashPressureMax = 100f;
 
-    [SerializeField, Min(0f)]
+    [SerializeField, Min(0f), InspectorName("紧绷压力增长速度（每秒）")]
     private float leashPressureIncreasePerSecond = 35f;
 
-    [SerializeField, Min(0f)]
+    [SerializeField, Min(0f), InspectorName("压力下降速度（每秒）")]
     private float leashPressureDecreasePerSecond = 25f;
 
     private readonly HashSet<DogAttractor> subscribedAttractors = new HashSet<DogAttractor>();
