@@ -1,0 +1,193 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: cfxr star blurred add
+  m_Shader: {fileID: 4800000, guid: 821d202de6e9d2248b958943ba1a752e, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _
+  - _CFXR_ADDITIVE
+  - _CFXR_DITHERED_SHADOWS_OFF
+  - _CFXR_HDR_BOOST
+  - _CFXR_OVERLAYBLEND_RGBA
+  - _CFXR_OVERLAYTEX_OFF
+  - _CFXR_SINGLE_CHANNEL
+  - _FADING_ON
+  m_LightmapFlags: 0
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DissolveMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DissolveTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DissolveTex01:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DistMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DistortTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DisturbanceTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DisturbanceTex01:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DitherCustom:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _GradientMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _GradientTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: 20afc140d08516e438ec27cadc2a614c, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MaskTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OverlayTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SecondColorTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _BacklightTransmittance: 1
+    - _BlendingType: 3
+    - _BumpScale: 1
+    - _CFXR_DITHERED_SHADOWS: 0
+    - _CFXR_OVERLAYBLEND: 0
+    - _CFXR_OVERLAYTEX: 0
+    - _CullMode: 0
+    - _Cutoff: 0.1
+    - _DepthOffset: 0
+    - _DirLightScreenAtten: 1
+    - _DirectLightingRamp: 1
+    - _DissEdgeRange: 0
+    - _DissEdgeRangeSoft: 0
+    - _DissolveSmooth: 0.1
+    - _DissolveSpeed01_x: 0
+    - _DissolveSpeed01_y: 0
+    - _DissolveSpeed_x: 0
+    - _DissolveSpeed_y: 0
+    - _Dissolve_Soft: 0
+    - _DistSpeed01_x: 0
+    - _DistSpeed01_y: 0
+    - _DistSpeed_x: 0
+    - _DistSpeed_y: 0
+    - _Distort: 0.1
+    - _Disturbance_Pow: 0
+    - _DoubleDissolve: 0
+    - _Dst: 1
+    - _DstBlend: 1
+    - _EdgeFadePow: 1
+    - _FadeAlongU: 0
+    - _ForceFront: 0
+    - _FresnelGradient: 0
+    - _FresnelIntensity: 1
+    - _FresnelModelNormal: 0
+    - _FresnelPower: 2
+    - _HdrBoost: 1
+    - _HdrMultiply: 4
+    - _IndirectLightingMix: 0.5
+    - _InvertDissolveTex: 0
+    - _LightingWorldPosStrength: 0.2
+    - _MainTexSpeed_x: 0
+    - _MainTexSpeed_y: 0
+    - _MaskSoft: 0
+    - _MaskSpeed_x: 0
+    - _MaskSpeed_y: 0
+    - _Mask_Percentage: 0
+    - _OVERLAYBLEND: 0
+    - _OVERLAYTEX: 0
+    - _ReceivedShadowsStrength: 0.5
+    - _SecondColorSmooth: 0.2
+    - _ShadowStrength: 1
+    - _SingleChannel: 1
+    - _SoftParticlesFadeDistance: 1
+    - _SoftParticlesFadeDistanceFar: 2
+    - _SoftParticlesFadeDistanceNear: 0
+    - _Src: 1
+    - _SrcBlend: 5
+    - _UVDistortionAdd: 0
+    - _UseAlphaClip: 0
+    - _UseBackLighting: 0
+    - _UseDissolve: 0
+    - _UseDissolveMask: 0
+    - _UseDissolveOffsetUV: 0
+    - _UseDist: 0
+    - _UseDistMask: 0
+    - _UseEF: 0
+    - _UseEmission: 0
+    - _UseFB: 0
+    - _UseFontColor: 0
+    - _UseFresnel: 0
+    - _UseGradientMap: 0
+    - _UseLighting: 0
+    - _UseLightingWorldPosOffset: 0
+    - _UseMask: 0
+    - _UseNormalMap: 0
+    - _UsePolarUV: 0
+    - _UseSP: 1
+    - _UseSecondColor: 0
+    - _UseSecondDissolve: 0
+    - _UseSecondDist: 0
+    - _UseSoftParticles: 0
+    - _UseUV2Distortion: 0
+    - _UseUVDistortion: 0
+    - _ZTest: 4
+    - _ZWrite: 0
+    - _Zwrite: 0
+    m_Colors:
+    - _Color: {r: 3.8792846, g: 3.8792846, b: 3.8792846, a: 0}
+    - _DissEdgeColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+    - _DissolveScroll: {r: 0, g: 0, b: 0, a: 0}
+    - _DistortScrolling: {r: 0, g: 0, b: 1, a: 1}
+    - _FresnelColor: {r: 1, g: 0.5, b: 0.2, a: 1}
+    - _GradientSpeed: {r: 0, g: 0, b: 0, a: 0}
+    - _MainColor: {r: 5.656854, g: 5.656854, b: 5.656854, a: 1}
+    - _OverlayTex_Scroll: {r: 0.1, g: 0.1, b: 1, a: 1}
+    - _PolarCenter: {r: 0.5, g: 0.5, b: 0, a: 0}
+    - _ShadowColor: {r: 0, g: 0, b: 0, a: 1}
+  m_BuildTextureStacks: []
