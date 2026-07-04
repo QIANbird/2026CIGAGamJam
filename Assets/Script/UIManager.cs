@@ -18,12 +18,28 @@ public sealed class UIManager : MonoBehaviour
     [SerializeField]
     private string closeTrigger = "close";
 
+    [Header("Level Complete")]
+    [SerializeField]
+    private GameObject endUI;
+
+    private LevelManager subscribedLevelManager;
+
     private void Awake()
     {
         if (pauseMenuAnimator != null)
         {
             pauseMenuAnimator.updateMode = AnimatorUpdateMode.UnscaledTime;
         }
+
+        if (endUI != null)
+        {
+            endUI.SetActive(false);
+        }
+    }
+
+    private void Start()
+    {
+        SubscribeToLevelCompleted();
     }
 
     private void Update()
@@ -86,6 +102,39 @@ public sealed class UIManager : MonoBehaviour
         SceneManager.LoadScene("Start Scene");
     }
 
+    public void RestartLevel()
+    {
+        RestoreTimeScaleBeforeSceneChange();
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    private void SubscribeToLevelCompleted()
+    {
+        if (levelManager == null)
+        {
+            levelManager = FindObjectOfType<LevelManager>();
+        }
+
+        if (levelManager == null)
+        {
+            return;
+        }
+
+        subscribedLevelManager = levelManager;
+        subscribedLevelManager.LevelCompleted += ShowEndUI;
+    }
+
+    private void ShowEndUI()
+    {
+        if (endUI == null)
+        {
+            Debug.LogError("UIManager requires an END_UI GameObject reference.", this);
+            return;
+        }
+
+        endUI.SetActive(true);
+    }
+
     private bool TryGetLevelManager(out LevelManager manager)
     {
         if (levelManager == null)
@@ -132,6 +181,14 @@ public sealed class UIManager : MonoBehaviour
         else
         {
             Time.timeScale = 1f;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (subscribedLevelManager != null)
+        {
+            subscribedLevelManager.LevelCompleted -= ShowEndUI;
         }
     }
 }

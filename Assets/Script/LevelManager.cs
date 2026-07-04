@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -12,6 +13,8 @@ public sealed class LevelManager : MonoBehaviour
 
     public bool IsLevelComplete { get; private set; }
     public bool IsPaused { get; private set; }
+
+    public event Action LevelCompleted;
 
     private void Awake()
     {
@@ -52,6 +55,8 @@ public sealed class LevelManager : MonoBehaviour
         {
             ownerFollower.enabled = false;
         }
+
+        LevelCompleted?.Invoke();
     }
 
     public void PauseGame()
