@@ -11,6 +11,9 @@ public sealed class DogAttractor : MonoBehaviour
     [SerializeField]
     private Transform attractionPoint;
 
+    [SerializeField, Min(0f)]
+    private float arrivalDistance = 0.3f;
+
     private readonly Dictionary<DogMovement, HashSet<Collider>> attractionOccupants =
         new Dictionary<DogMovement, HashSet<Collider>>();
 
@@ -21,6 +24,8 @@ public sealed class DogAttractor : MonoBehaviour
 
     public float AttractionStrength => attractionStrength;
 
+    public float ArrivalDistance => arrivalDistance;
+
     public Vector3 AttractionPosition => attractionPoint != null
         ? attractionPoint.position
         : transform.position;
@@ -28,6 +33,7 @@ public sealed class DogAttractor : MonoBehaviour
     private void OnValidate()
     {
         attractionStrength = Mathf.Clamp01(attractionStrength);
+        arrivalDistance = Mathf.Max(0f, arrivalDistance);
     }
 
     internal void HandleZoneEnter(
