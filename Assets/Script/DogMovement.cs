@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -17,7 +18,9 @@ public sealed class DogMovement : MonoBehaviour
     [SerializeField, Min(0f)]
     private float slowdownDistance = 1f;
 
+    private readonly HashSet<DogAttractor> activeAttractors = new HashSet<DogAttractor>();
     private Rigidbody dogRigidbody;
+    private Rigidbody ownerRigidbody;
     private Vector2 moveInput;
 
     private void Awake()
@@ -31,13 +34,14 @@ public sealed class DogMovement : MonoBehaviour
 
     private void Start()
     {
-        if (owner != null)
+        if (owner == null)
         {
+            Debug.LogError("DogMovement requires the Owner root Transform.", this);
+            enabled = false;
             return;
         }
 
-        Debug.LogError("DogMovement requires the Owner root Transform.", this);
-        enabled = false;
+        owner.TryGetComponent(out ownerRigidbody);
     }
 
     private void OnValidate()
@@ -66,55 +70,53 @@ public sealed class DogMovement : MonoBehaviour
 
     private void FixedUpdate()
     {
-        Vector3 input = new Vector3(moveInput.x, 0f, moveInput.y);
-        float inputStrength = Mathf.Clamp01(input.magnitude);
+        Vector3 steering = new Vector3(moveInput.x, 0f, moveInput.y);
+        DogAttractor attractor = GetClosestActiveAttractor();
 
-        if (inputStrength <= Mathf.Epsilon)
+        if (attractor != null)
+        {
+            Vector3 toAttractor = attractor.AttractionPosition - dogRigidbody.position;
+            toAttractor.y = 0f;
+
+            if (toAttractor.sqrMagnitude > Mathf.Epsilon)
+            {
+                steering += toAttractor.normalized * attractor.AttractionStrength;
+            }
+        }
+
+        float steeringMagnitude = steering.magnitude;
+
+        if (steeringMagnitude <= Mathf.Epsilon)
         {
             StopHorizontalMovement();
             return;
         }
 
-        Vector3 moveDirection = input / inputStrength;
-        float desiredStep = moveSpeed * inputStrength * Time.fixedDeltaTime;
+        Vector3 moveDirection = steering / steeringMagnitude;
+        float inputStrength = Mathf.Clamp01(steeringMagnitude);
+        Vector3 desiredVelocity = moveDirection * (moveSpeed * inputStrength);
+        Vector3 limitedVelocity = LimitVelocityByLeash(desiredVelocity);
 
-        Vector3 ownerOffset = dogRigidbody.position - owner.position;
-        ownerOffset.y = 0f;
-
-        float currentDistanceSquared = ownerOffset.sqrMagnitude;
-        float maxDistanceSquared = maxLeashDistance * maxLeashDistance;
-        Vector3 unrestrictedOffset = ownerOffset + moveDirection * desiredStep;
-        bool increasesDistance = unrestrictedOffset.sqrMagnitude > currentDistanceSquared;
-
-        if (currentDistanceSquared >= maxDistanceSquared)
-        {
-            if (increasesDistance)
-            {
-                desiredStep = 0f;
-            }
-        }
-        else if (increasesDistance && slowdownDistance > 0f)
-        {
-            float currentDistance = Mathf.Sqrt(currentDistanceSquared);
-            float slowdownStart = maxLeashDistance - slowdownDistance;
-            float stretch = Mathf.InverseLerp(slowdownStart, maxLeashDistance, currentDistance);
-            float speedMultiplier = 1f - Mathf.SmoothStep(0f, 1f, stretch);
-            desiredStep *= speedMultiplier;
-        }
-
-        Vector3 limitedOffset = ownerOffset + moveDirection * desiredStep;
-
-        if (currentDistanceSquared < maxDistanceSquared && limitedOffset.sqrMagnitude > maxDistanceSquared)
-        {
-            float remainingStep = GetDistanceToBoundary(ownerOffset, moveDirection);
-            desiredStep = Mathf.Min(desiredStep, remainingStep);
-        }
-
-        float limitedSpeed = desiredStep / Time.fixedDeltaTime;
         Vector3 velocity = dogRigidbody.velocity;
-        velocity.x = moveDirection.x * limitedSpeed;
-        velocity.z = moveDirection.z * limitedSpeed;
+        velocity.x = limitedVelocity.x;
+        velocity.z = limitedVelocity.z;
         dogRigidbody.velocity = velocity;
+    }
+
+    internal void RegisterAttractor(DogAttractor attractor)
+    {
+        if (attractor != null)
+        {
+            activeAttractors.Add(attractor);
+        }
+    }
+
+    internal void UnregisterAttractor(DogAttractor attractor)
+    {
+        if (attractor != null)
+        {
+            activeAttractors.Remove(attractor);
+        }
     }
 
     private void OnDisable()
@@ -127,18 +129,78 @@ public sealed class DogMovement : MonoBehaviour
         StopHorizontalMovement();
     }
 
-    private float GetDistanceToBoundary(Vector3 ownerOffset, Vector3 moveDirection)
+    private DogAttractor GetClosestActiveAttractor()
     {
-        float projection = Vector3.Dot(ownerOffset, moveDirection);
-        float distanceFromBoundary = ownerOffset.sqrMagnitude - maxLeashDistance * maxLeashDistance;
-        float discriminant = projection * projection - distanceFromBoundary;
+        DogAttractor closest = null;
+        float closestDistanceSquared = float.PositiveInfinity;
 
-        if (discriminant <= 0f)
+        foreach (DogAttractor attractor in activeAttractors)
         {
-            return 0f;
+            if (attractor == null || !attractor.isActiveAndEnabled)
+            {
+                continue;
+            }
+
+            Vector3 offset = attractor.AttractionPosition - dogRigidbody.position;
+            offset.y = 0f;
+            float distanceSquared = offset.sqrMagnitude;
+
+            if (distanceSquared >= closestDistanceSquared)
+            {
+                continue;
+            }
+
+            closest = attractor;
+            closestDistanceSquared = distanceSquared;
         }
 
-        return Mathf.Max(0f, -projection + Mathf.Sqrt(discriminant));
+        return closest;
+    }
+
+    private Vector3 LimitVelocityByLeash(Vector3 desiredDogVelocity)
+    {
+        Vector3 ownerOffset = dogRigidbody.position - owner.position;
+        ownerOffset.y = 0f;
+
+        float currentDistance = ownerOffset.magnitude;
+
+        if (currentDistance <= Mathf.Epsilon)
+        {
+            return desiredDogVelocity;
+        }
+
+        Vector3 ownerVelocity = Vector3.zero;
+
+        if (ownerRigidbody != null)
+        {
+            ownerVelocity = ownerRigidbody.velocity;
+            ownerVelocity.y = 0f;
+        }
+
+        Vector3 leashDirection = ownerOffset / currentDistance;
+        Vector3 relativeVelocity = desiredDogVelocity - ownerVelocity;
+        float outwardRelativeSpeed = Vector3.Dot(relativeVelocity, leashDirection);
+
+        if (outwardRelativeSpeed > 0f)
+        {
+            float slowdownStart = maxLeashDistance - slowdownDistance;
+            float stretch = slowdownDistance > 0f
+                ? Mathf.InverseLerp(slowdownStart, maxLeashDistance, currentDistance)
+                : currentDistance >= maxLeashDistance ? 1f : 0f;
+            float slowdown = Mathf.SmoothStep(0f, 1f, stretch);
+            relativeVelocity -= leashDirection * (outwardRelativeSpeed * slowdown);
+        }
+
+        float allowedDistance = Mathf.Max(maxLeashDistance, currentDistance);
+        Vector3 predictedOffset = ownerOffset + relativeVelocity * Time.fixedDeltaTime;
+
+        if (predictedOffset.sqrMagnitude > allowedDistance * allowedDistance)
+        {
+            predictedOffset = predictedOffset.normalized * allowedDistance;
+            relativeVelocity = (predictedOffset - ownerOffset) / Time.fixedDeltaTime;
+        }
+
+        return ownerVelocity + relativeVelocity;
     }
 
     private void StopHorizontalMovement()
