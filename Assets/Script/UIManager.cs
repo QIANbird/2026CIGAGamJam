@@ -22,7 +22,14 @@ public sealed class UIManager : MonoBehaviour
     [SerializeField]
     private GameObject endUI;
 
+    [SerializeField]
+    private Animator endUiAnimator;
+
+    [SerializeField]
+    private string endUiOverTrigger = "OVER";
+
     private LevelManager subscribedLevelManager;
+    private CanvasGroup endUiCanvasGroup;
 
     private void Awake()
     {
@@ -33,6 +40,7 @@ public sealed class UIManager : MonoBehaviour
 
         if (endUI != null)
         {
+            CacheEndUiReferences();
             endUI.SetActive(false);
         }
     }
@@ -133,6 +141,21 @@ public sealed class UIManager : MonoBehaviour
         }
 
         endUI.SetActive(true);
+
+        CacheEndUiReferences();
+
+        if (endUiAnimator == null && endUiCanvasGroup != null)
+        {
+            endUiCanvasGroup.alpha = 1f;
+            endUiCanvasGroup.interactable = true;
+            endUiCanvasGroup.blocksRaycasts = true;
+        }
+
+        if (endUiAnimator != null && !string.IsNullOrEmpty(endUiOverTrigger))
+        {
+            endUiAnimator.ResetTrigger(endUiOverTrigger);
+            endUiAnimator.SetTrigger(endUiOverTrigger);
+        }
     }
 
     private bool TryGetLevelManager(out LevelManager manager)
@@ -181,6 +204,36 @@ public sealed class UIManager : MonoBehaviour
         else
         {
             Time.timeScale = 1f;
+        }
+    }
+
+    private void CacheEndUiReferences()
+    {
+        if (endUI == null)
+        {
+            endUiAnimator = null;
+            endUiCanvasGroup = null;
+            return;
+        }
+
+        if (endUiAnimator == null)
+        {
+            endUiAnimator = endUI.GetComponent<Animator>();
+
+            if (endUiAnimator == null)
+            {
+                endUiAnimator = endUI.GetComponentInChildren<Animator>(true);
+            }
+        }
+
+        if (endUiCanvasGroup == null)
+        {
+            endUiCanvasGroup = endUI.GetComponent<CanvasGroup>();
+
+            if (endUiCanvasGroup == null)
+            {
+                endUiCanvasGroup = endUI.GetComponentInChildren<CanvasGroup>(true);
+            }
         }
     }
 
