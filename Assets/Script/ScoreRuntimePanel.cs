@@ -288,7 +288,7 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
         SetText(
             totalScoreLegacyText,
             totalScoreTmpText,
-            $"\u5206\u6570\uff1a{scoreManager.TotalScore:F1}");
+            $"\u5206\u6570\uff1a{Mathf.RoundToInt(scoreManager.TotalScore)}");
 
         SetText(
             testLegacyText,

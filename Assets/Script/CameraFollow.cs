@@ -4,54 +4,35 @@ using UnityEngine;
 [RequireComponent(typeof(Camera))]
 public sealed class CameraFollow : MonoBehaviour
 {
-    [Header("Targets")]
-    [SerializeField]
-    private Transform dog;
-
-    [SerializeField]
-    private Transform owner;
-
-    [SerializeField, Range(0f, 1f)]
-    private float dogBias = 0.65f;
+    [Header("Target")]
+    public Transform dog;
 
     [Header("Framing")]
-    [SerializeField]
-    private Vector3 baseOffset = new Vector3(0f, 8f, -8f);
+    [Min(0f)]
+    public float followDistance = 3f;
 
-    [SerializeField]
-    private float focusHeight = 0.8f;
+    [Min(0f)]
+    public float cameraHeight = 0.8f;
 
-    [SerializeField, Min(0f)]
-    private float zoomStartDistance = 2.5f;
-
-    [SerializeField, Min(0f)]
-    private float zoomPerMeter = 0.8f;
-
-    [SerializeField, Min(0f)]
-    private float maximumExtraDistance = 3f;
+    [Min(0f)]
+    public float lookHeight = 0.6f;
 
     [Header("Smoothing")]
-    [SerializeField, Min(0.01f)]
-    private float followSmoothTime = 0.18f;
+    [Min(0.01f)]
+    public float followSmoothTime = 0.18f;
 
-    [SerializeField]
-    private bool snapOnStart = true;
+    [Min(0.01f)]
+    public float rotationSharpness = 12f;
+
+    public bool snapOnStart = true;
 
     private Vector3 followVelocity;
-    private Vector3 offsetDirection;
-    private float baseDistance;
-    private Quaternion fixedRotation;
-
-    private void Awake()
-    {
-        RecalculateOffset();
-    }
 
     private void Start()
     {
-        if (dog == null || owner == null)
+        if (dog == null)
         {
-            Debug.LogError("CameraFollow requires both PlayerDog and Owner root Transforms.", this);
+            Debug.LogError("CameraFollow requires the PlayerDog root Transform.", this);
             enabled = false;
             return;
         }
@@ -59,20 +40,17 @@ public sealed class CameraFollow : MonoBehaviour
         if (snapOnStart)
         {
             transform.position = CalculateDesiredPosition();
+            transform.rotation = CalculateDesiredRotation();
         }
-
-        transform.rotation = fixedRotation;
     }
 
     private void OnValidate()
     {
-        dogBias = Mathf.Clamp01(dogBias);
-        zoomStartDistance = Mathf.Max(0f, zoomStartDistance);
-        zoomPerMeter = Mathf.Max(0f, zoomPerMeter);
-        maximumExtraDistance = Mathf.Max(0f, maximumExtraDistance);
+        followDistance = Mathf.Max(0f, followDistance);
+        cameraHeight = Mathf.Max(0f, cameraHeight);
+        lookHeight = Mathf.Max(0f, lookHeight);
         followSmoothTime = Mathf.Max(0.01f, followSmoothTime);
-
-        RecalculateOffset();
+        rotationSharpness = Mathf.Max(0.01f, rotationSharpness);
     }
 
     private void LateUpdate()
@@ -84,36 +62,44 @@ public sealed class CameraFollow : MonoBehaviour
             ref followVelocity,
             followSmoothTime);
 
-        transform.rotation = fixedRotation;
+        Quaternion desiredRotation = CalculateDesiredRotation();
+        float rotationBlend = 1f - Mathf.Exp(-rotationSharpness * Time.deltaTime);
+        transform.rotation = Quaternion.Slerp(
+            transform.rotation,
+            desiredRotation,
+            rotationBlend);
     }
 
     private Vector3 CalculateDesiredPosition()
     {
-        Vector3 focusPoint = Vector3.Lerp(owner.position, dog.position, dogBias);
-        focusPoint.y += focusHeight;
-
-        Vector3 separation = dog.position - owner.position;
-        separation.y = 0f;
-
-        float extraDistance = Mathf.Clamp(
-            (separation.magnitude - zoomStartDistance) * zoomPerMeter,
-            0f,
-            maximumExtraDistance);
-
-        return focusPoint + offsetDirection * (baseDistance + extraDistance);
+        Vector3 forward = GetPlanarDogForward();
+        return dog.position - forward * followDistance + Vector3.up * cameraHeight;
     }
 
-    private void RecalculateOffset()
+    private Quaternion CalculateDesiredRotation()
     {
-        baseDistance = baseOffset.magnitude;
+        Vector3 lookPoint = dog.position + Vector3.up * lookHeight;
+        Vector3 lookDirection = lookPoint - transform.position;
 
-        if (baseDistance <= Mathf.Epsilon)
+        if (lookDirection.sqrMagnitude <= Mathf.Epsilon)
         {
-            baseOffset = new Vector3(0f, 8f, -8f);
-            baseDistance = baseOffset.magnitude;
+            return transform.rotation;
         }
 
-        offsetDirection = baseOffset / baseDistance;
-        fixedRotation = Quaternion.LookRotation(-offsetDirection, Vector3.up);
+        return Quaternion.LookRotation(lookDirection, Vector3.up);
+    }
+
+    private Vector3 GetPlanarDogForward()
+    {
+        Vector3 forward = Vector3.ProjectOnPlane(dog.forward, Vector3.up);
+
+        if (forward.sqrMagnitude <= Mathf.Epsilon)
+        {
+            forward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
+        }
+
+        return forward.sqrMagnitude > Mathf.Epsilon
+            ? forward.normalized
+            : Vector3.forward;
     }
 }
