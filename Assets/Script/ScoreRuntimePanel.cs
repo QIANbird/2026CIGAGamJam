@@ -1,4 +1,3 @@
-using System.Text;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,114 +5,149 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public sealed class ScoreRuntimePanel : MonoBehaviour
 {
+    [Header("\u6570\u636e\u6765\u6e90")]
     [SerializeField]
     private ScoreManager scoreManager;
 
+    [Header("Runtime_UI \u6839\u8282\u70b9")]
     [SerializeField]
     private string runtimeUiName = "Runtime_UI";
 
-    [SerializeField, Min(0f)]
-    private float leftPadding = 16f;
-
-    [SerializeField, Min(0f)]
-    private float topPadding = 16f;
-
-    [SerializeField, Min(1)]
-    private int fontSize = 20;
+    [Header("\u9759\u6001\u63a7\u4ef6\u540d\u79f0")]
+    [SerializeField]
+    private string testTextName = "Text_test";
 
     [SerializeField]
-    private Color textColor = Color.white;
+    private string totalScoreTextName = "Text_totalScore";
 
-    private readonly StringBuilder stringBuilder = new StringBuilder(128);
+    [SerializeField]
+    private string timeTextName = "Text_time";
 
-    private Text legacyText;
-    private TMP_Text tmpText;
+    [SerializeField]
+    private string pressureSliderName = "Slider_presure";
+
+    [SerializeField]
+    private string pressureValueTextName = "Text_PresureValue";
+
+    [Header("\u538b\u529b\u6761\u989c\u8272")]
+    [SerializeField]
+    private Color normalPressureColor = new Color(0.2f, 0.8f, 0.2f, 1f);
+
+    [SerializeField]
+    private Color warningPressureColor = new Color(1f, 0.85f, 0.1f, 1f);
+
+    [SerializeField]
+    private Color dangerPressureColor = new Color(1f, 0.2f, 0.2f, 1f);
+
+    [SerializeField, Range(0f, 1f)]
+    private float warningThresholdNormalized = 0.7f;
+
+    [SerializeField, Range(0f, 1f)]
+    private float dangerThresholdNormalized = 0.9f;
+
+    private RectTransform runtimeUiRoot;
+
+    private Text testLegacyText;
+    private TMP_Text testTmpText;
+
+    private Text totalScoreLegacyText;
+    private TMP_Text totalScoreTmpText;
+
+    private Text timeLegacyText;
+    private TMP_Text timeTmpText;
+
+    private Text pressureValueLegacyText;
+    private TMP_Text pressureValueTmpText;
+
+    private Slider pressureSlider;
+    private Image pressureFillImage;
+
+    private bool missingTimeTextLogged;
 
     private void Awake()
     {
-        if (scoreManager == null)
-        {
-            scoreManager = FindObjectOfType<ScoreManager>();
-        }
-
-        EnsureRuntimeTextExists();
+        ResolveScoreManager();
+        EnsureUiReferencesBound();
     }
 
     private void OnEnable()
     {
-        if (scoreManager == null)
-        {
-            scoreManager = FindObjectOfType<ScoreManager>();
-        }
+        ResolveScoreManager();
 
         if (scoreManager != null)
         {
-            scoreManager.ScoresChanged += RefreshText;
+            scoreManager.ScoresChanged -= RefreshUi;
+            scoreManager.ScoresChanged += RefreshUi;
         }
 
-        RefreshText();
+        RefreshUi();
     }
 
     private void OnDisable()
     {
         if (scoreManager != null)
         {
-            scoreManager.ScoresChanged -= RefreshText;
+            scoreManager.ScoresChanged -= RefreshUi;
         }
     }
 
-    private void EnsureRuntimeTextExists()
+    private void OnValidate()
     {
-        if (legacyText != null || tmpText != null)
+        warningThresholdNormalized = Mathf.Clamp01(warningThresholdNormalized);
+        dangerThresholdNormalized = Mathf.Clamp(dangerThresholdNormalized, warningThresholdNormalized, 1f);
+    }
+
+    private void ResolveScoreManager()
+    {
+        if (scoreManager == null)
         {
-            return;
+            scoreManager = FindObjectOfType<ScoreManager>();
+        }
+    }
+
+    private void EnsureUiReferencesBound()
+    {
+        if (runtimeUiRoot == null)
+        {
+            runtimeUiRoot = FindRuntimeUiRoot();
         }
 
-        RectTransform panelRoot = FindOrCreateRuntimeUiRoot();
-
-        if (panelRoot == null)
+        if (runtimeUiRoot == null)
         {
-            Debug.LogError("ScoreRuntimePanel could not find or create a Runtime_UI root.", this);
+            Debug.LogError("ScoreRuntimePanel could not find Runtime_UI.", this);
             enabled = false;
             return;
         }
 
-        if (TryBindExistingText(panelRoot))
+        if (testLegacyText == null && testTmpText == null)
         {
-            return;
+            BindText(testTextName, out testLegacyText, out testTmpText);
         }
 
-        legacyText = CreateRuntimeLegacyText(panelRoot);
-    }
-
-    private RectTransform FindOrCreateRuntimeUiRoot()
-    {
-        RectTransform existingRoot = FindRuntimeUiRoot();
-
-        if (existingRoot != null)
+        if (totalScoreLegacyText == null && totalScoreTmpText == null)
         {
-            return existingRoot;
+            BindText(totalScoreTextName, out totalScoreLegacyText, out totalScoreTmpText);
         }
 
-        Canvas canvas = FindObjectOfType<Canvas>();
-
-        if (canvas == null)
+        if (timeLegacyText == null && timeTmpText == null)
         {
-            return null;
+            BindText(timeTextName, out timeLegacyText, out timeTmpText);
         }
 
-        GameObject runtimeUiObject = new GameObject(runtimeUiName);
-        runtimeUiObject.layer = canvas.gameObject.layer;
+        if (pressureValueLegacyText == null && pressureValueTmpText == null)
+        {
+            BindText(pressureValueTextName, out pressureValueLegacyText, out pressureValueTmpText);
+        }
 
-        RectTransform rootRect = runtimeUiObject.AddComponent<RectTransform>();
-        rootRect.SetParent(canvas.transform, false);
-        rootRect.anchorMin = new Vector2(0f, 1f);
-        rootRect.anchorMax = new Vector2(0f, 1f);
-        rootRect.pivot = new Vector2(0f, 1f);
-        rootRect.anchoredPosition = new Vector2(leftPadding, -topPadding);
-        rootRect.sizeDelta = new Vector2(360f, 140f);
+        if (pressureSlider == null)
+        {
+            pressureSlider = FindComponentInRuntimeUi<Slider>(pressureSliderName);
+        }
 
-        return rootRect;
+        if (pressureFillImage == null)
+        {
+            pressureFillImage = ResolvePressureFillImage(pressureSlider);
+        }
     }
 
     private RectTransform FindRuntimeUiRoot()
@@ -136,10 +170,7 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
                 continue;
             }
 
-            if (string.Equals(
-                    rectTransform.name,
-                    runtimeUiName,
-                    System.StringComparison.OrdinalIgnoreCase))
+            if (NamesMatch(rectTransform.name, runtimeUiName))
             {
                 return rectTransform;
             }
@@ -148,148 +179,189 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
         return null;
     }
 
-    private bool TryBindExistingText(RectTransform panelRoot)
+    private void BindText(string objectName, out Text legacyText, out TMP_Text tmpText)
     {
-        Transform explicitScoreText = panelRoot.Find("ScoreRuntimeText");
+        legacyText = null;
+        tmpText = null;
 
-        if (TryAssignTextComponent(explicitScoreText))
+        Transform target = FindDeepChild(runtimeUiRoot, objectName);
+
+        if (target == null)
         {
-            return true;
+            return;
         }
 
-        Transform headerText = panelRoot.Find("Text_header");
+        legacyText = target.GetComponent<Text>();
 
-        if (TryAssignTextComponent(headerText))
+        if (legacyText != null)
         {
-            return true;
+            return;
         }
 
-        Text[] legacyTexts = panelRoot.GetComponentsInChildren<Text>(true);
-
-        if (legacyTexts.Length > 0)
-        {
-            legacyText = legacyTexts[0];
-            ConfigureLegacyText(legacyText);
-            return true;
-        }
-
-        TMP_Text[] tmpTexts = panelRoot.GetComponentsInChildren<TMP_Text>(true);
-
-        if (tmpTexts.Length > 0)
-        {
-            tmpText = tmpTexts[0];
-            ConfigureTmpText(tmpText);
-            return true;
-        }
-
-        return false;
+        tmpText = target.GetComponent<TMP_Text>();
     }
 
-    private bool TryAssignTextComponent(Transform target)
+    private T FindComponentInRuntimeUi<T>(string objectName)
+        where T : Component
     {
-        if (target == null)
+        Transform target = FindDeepChild(runtimeUiRoot, objectName);
+        return target != null ? target.GetComponent<T>() : null;
+    }
+
+    private static Transform FindDeepChild(Transform parent, string targetName)
+    {
+        if (parent == null || string.IsNullOrWhiteSpace(targetName))
+        {
+            return null;
+        }
+
+        int childCount = parent.childCount;
+
+        for (int i = 0; i < childCount; i++)
+        {
+            Transform child = parent.GetChild(i);
+
+            if (NamesMatch(child.name, targetName))
+            {
+                return child;
+            }
+
+            Transform nested = FindDeepChild(child, targetName);
+
+            if (nested != null)
+            {
+                return nested;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool NamesMatch(string actualName, string expectedName)
+    {
+        if (string.IsNullOrWhiteSpace(actualName) || string.IsNullOrWhiteSpace(expectedName))
         {
             return false;
         }
 
-        if (target.TryGetComponent(out Text foundLegacyText))
+        return string.Equals(
+            actualName.Trim(),
+            expectedName.Trim(),
+            System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    private Image ResolvePressureFillImage(Slider slider)
+    {
+        if (slider == null || slider.fillRect == null)
         {
-            legacyText = foundLegacyText;
-            ConfigureLegacyText(legacyText);
-            return true;
+            return null;
         }
 
-        if (target.TryGetComponent(out TMP_Text foundTmpText))
+        Image fillImage = slider.fillRect.GetComponent<Image>();
+
+        if (fillImage != null)
         {
-            tmpText = foundTmpText;
-            ConfigureTmpText(tmpText);
-            return true;
+            return fillImage;
         }
 
-        return false;
+        return slider.fillRect.GetComponentInChildren<Image>(true);
     }
 
-    private void ConfigureLegacyText(Text textComponent)
+    private void RefreshUi()
     {
-        textComponent.font = textComponent.font != null
-            ? textComponent.font
-            : Resources.GetBuiltinResource<Font>("Arial.ttf");
-        textComponent.fontSize = fontSize;
-        textComponent.color = textColor;
-        textComponent.alignment = TextAnchor.UpperLeft;
-        textComponent.horizontalOverflow = HorizontalWrapMode.Overflow;
-        textComponent.verticalOverflow = VerticalWrapMode.Overflow;
-        textComponent.raycastTarget = false;
-        textComponent.supportRichText = false;
-    }
-
-    private void ConfigureTmpText(TMP_Text textComponent)
-    {
-        textComponent.fontSize = fontSize;
-        textComponent.color = textColor;
-        textComponent.alignment = TextAlignmentOptions.TopLeft;
-        textComponent.enableWordWrapping = false;
-        textComponent.raycastTarget = false;
-        textComponent.richText = false;
-        textComponent.overflowMode = TextOverflowModes.Overflow;
-    }
-
-    private Text CreateRuntimeLegacyText(RectTransform panelRoot)
-    {
-        GameObject textObject = new GameObject("ScoreRuntimeText");
-        textObject.layer = panelRoot.gameObject.layer;
-
-        RectTransform textRect = textObject.AddComponent<RectTransform>();
-        textRect.SetParent(panelRoot, false);
-        textRect.anchorMin = new Vector2(0f, 1f);
-        textRect.anchorMax = new Vector2(0f, 1f);
-        textRect.pivot = new Vector2(0f, 1f);
-        textRect.anchoredPosition = Vector2.zero;
-        textRect.sizeDelta = new Vector2(360f, 140f);
-
-        Text textComponent = textObject.AddComponent<Text>();
-        ConfigureLegacyText(textComponent);
-        return textComponent;
-    }
-
-    private void RefreshText()
-    {
-        if (legacyText == null && tmpText == null)
+        if (scoreManager == null)
         {
-            EnsureRuntimeTextExists();
+            ResolveScoreManager();
         }
 
-        string displayText;
+        EnsureUiReferencesBound();
 
         if (scoreManager == null)
         {
-            displayText = "Score system not found.";
+            SetText(totalScoreLegacyText, totalScoreTmpText, "\u5206\u6570\uff1a--");
+            SetText(testLegacyText, testTmpText, "\u76f2\u9053\u5f97\u5206\uff1a--\n\u6263\u5206\u603b\u8ba1\uff1a--");
+            SetText(timeLegacyText, timeTmpText, "\u5df2\u7528\u65f6\u95f4\uff1a--");
+            SetText(pressureValueLegacyText, pressureValueTmpText, "\u538b\u529b\u503c\uff1a--");
+            return;
+        }
+
+        SetText(
+            totalScoreLegacyText,
+            totalScoreTmpText,
+            $"\u5206\u6570\uff1a{scoreManager.TotalScore:F1}");
+
+        SetText(
+            testLegacyText,
+            testTmpText,
+            $"\u76f2\u9053\u5f97\u5206\uff1a{scoreManager.BlindPathMoveScore:F1}\n\u6263\u5206\u603b\u8ba1\uff1a{scoreManager.PenaltyTotal:F1}");
+
+        if (timeLegacyText != null || timeTmpText != null)
+        {
+            SetText(
+                timeLegacyText,
+                timeTmpText,
+                $"\u5df2\u7528\u65f6\u95f4\uff1a{scoreManager.ElapsedTime:F1}");
+            missingTimeTextLogged = false;
+        }
+        else if (!missingTimeTextLogged)
+        {
+            Debug.LogWarning(
+                $"ScoreRuntimePanel could not find time text '{timeTextName}'. " +
+                "Please confirm the object exists under Runtime_UI and the scene is saved.",
+                this);
+            missingTimeTextLogged = true;
+        }
+
+        SetText(
+            pressureValueLegacyText,
+            pressureValueTmpText,
+            $"\u538b\u529b\u503c\uff1a{scoreManager.CurrentLeashPressure:F1}/{scoreManager.MaxLeashPressure:F0}");
+
+        RefreshPressureSlider();
+    }
+
+    private void RefreshPressureSlider()
+    {
+        if (pressureSlider == null || scoreManager == null)
+        {
+            return;
+        }
+
+        pressureSlider.minValue = 0f;
+        pressureSlider.maxValue = scoreManager.MaxLeashPressure;
+        pressureSlider.value = scoreManager.CurrentLeashPressure;
+
+        if (pressureFillImage == null)
+        {
+            return;
+        }
+
+        float normalizedPressure = scoreManager.LeashPressureNormalized;
+
+        if (normalizedPressure >= dangerThresholdNormalized)
+        {
+            pressureFillImage.color = dangerPressureColor;
+        }
+        else if (normalizedPressure >= warningThresholdNormalized)
+        {
+            pressureFillImage.color = warningPressureColor;
         }
         else
         {
-            stringBuilder.Length = 0;
-            stringBuilder.Append("\u603b\u5206: ");
-            stringBuilder.Append(scoreManager.TotalScore.ToString("F1"));
-            stringBuilder.Append('\n');
-            stringBuilder.Append("\u76f2\u9053\u5f97\u5206: ");
-            stringBuilder.Append(scoreManager.BlindPathMoveScore.ToString("F1"));
-            stringBuilder.Append('\n');
-            stringBuilder.Append("\u6263\u5206\u603b\u8ba1: ");
-            stringBuilder.Append(scoreManager.PenaltyTotal.ToString("F1"));
-            stringBuilder.Append('\n');
-            stringBuilder.Append("\u7d2f\u8ba1\u65f6\u95f4: ");
-            stringBuilder.Append(scoreManager.ElapsedTime.ToString("F1"));
-            displayText = stringBuilder.ToString();
+            pressureFillImage.color = normalPressureColor;
         }
+    }
 
+    private static void SetText(Text legacyText, TMP_Text tmpText, string content)
+    {
         if (legacyText != null)
         {
-            legacyText.text = displayText;
+            legacyText.text = content;
         }
 
         if (tmpText != null)
         {
-            tmpText.text = displayText;
+            tmpText.text = content;
         }
     }
 }
