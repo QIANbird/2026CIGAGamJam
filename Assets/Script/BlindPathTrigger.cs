@@ -8,6 +8,8 @@ public sealed class BlindPathTrigger : MonoBehaviour
     private readonly HashSet<Collider> ownerCollidersInside = new HashSet<Collider>();
     private OwnerFollower trackedOwner;
 
+    public bool IsOwnerInside => ownerCollidersInside.Count > 0;
+
     private void Awake()
     {
         if (!TryGetComponent(out BoxCollider triggerCollider))
