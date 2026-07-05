@@ -26,7 +26,7 @@ Shader "Custom/BuildingOutline_CustomShadow"
             "LightMode"="ForwardBase"
         }
 
-        // Pass1：外描边（移除报错ZOffset，顶点合并偏移）
+        // Pass1：外描边（增加雾支持）
         Pass
         {
             Name "OUTLINE"
@@ -37,6 +37,8 @@ Shader "Custom/BuildingOutline_CustomShadow"
             #pragma vertex vert
             #pragma fragment frag
             #include "UnityCG.cginc"
+            // 开启雾编译宏
+            #pragma multi_compile_fog
 
             float _OutlineWidth;
             float _OutlineDepthOffset;
@@ -51,6 +53,7 @@ Shader "Custom/BuildingOutline_CustomShadow"
             struct v2f
             {
                 float4 pos : SV_POSITION;
+                UNITY_FOG_COORDS(1) // 雾插值坐标
             };
 
             v2f vert (appdata v)
@@ -61,17 +64,20 @@ Shader "Custom/BuildingOutline_CustomShadow"
                 // 宽度+偏移合并替代ZOffset指令，无编译报错
                 posVS.xyz += normalVS * (_OutlineWidth + _OutlineDepthOffset);
                 o.pos = mul(UNITY_MATRIX_P, posVS);
+                UNITY_TRANSFER_FOG(o, o.pos); // 传递雾因子
                 return o;
             }
 
             fixed4 frag (v2f i) : SV_Target
             {
-                return _OutlineColor;
+                fixed4 col = _OutlineColor;
+                UNITY_APPLY_FOG(i.fogCoord, col); // 混合雾
+                return col;
             }
             ENDCG
         }
 
-        // Pass2：主体渲染 + 自定义阴影颜色核心逻辑
+        // Pass2：主体渲染 + 自定义阴影颜色 + 雾效兼容
         Pass
         {
             Name "BASE"
@@ -83,6 +89,7 @@ Shader "Custom/BuildingOutline_CustomShadow"
             #pragma fragment frag
             #pragma multi_compile_fwdbase
             #pragma multi_compile_shadowcaster
+            #pragma multi_compile_fog // 雾关键宏
             #include "UnityCG.cginc"
             #include "Lighting.cginc"
             #include "AutoLight.cginc"
@@ -110,6 +117,7 @@ Shader "Custom/BuildingOutline_CustomShadow"
                 float3 worldNormal : TEXCOORD1;
                 float3 worldPos : TEXCOORD2;
                 SHADOW_COORDS(3)
+                UNITY_FOG_COORDS(4) // 雾插值通道，避开shadow占用的3号
             };
 
             v2f vert (appdata v)
@@ -120,6 +128,7 @@ Shader "Custom/BuildingOutline_CustomShadow"
                 o.worldNormal = UnityObjectToWorldNormal(v.normal);
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
                 TRANSFER_SHADOW(o);
+                UNITY_TRANSFER_FOG(o, o.pos); // 计算并传递雾系数
                 return o;
             }
 
@@ -151,7 +160,9 @@ Shader "Custom/BuildingOutline_CustomShadow"
                 float spec = pow(saturate(dot(worldN, halfDir)), specPow);
                 diffuseFinal += _LightColor0.rgb * spec * _Gloss * shadowAtten;
 
-                return fixed4(diffuseFinal, 1);
+                fixed4 finalCol = fixed4(diffuseFinal, 1);
+                UNITY_APPLY_FOG(i.fogCoord, finalCol); // 雾混合
+                return finalCol;
             }
             ENDCG
         }
