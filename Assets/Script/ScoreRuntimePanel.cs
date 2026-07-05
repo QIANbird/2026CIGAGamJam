@@ -24,7 +24,16 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
     private string timeTextName = "Text_time";
 
     [SerializeField]
+    private string topLeftScoreContainerName = "Runtime_UI(1)";
+
+    [SerializeField]
     private string pressureSliderName = "Slider_presure";
+
+    [SerializeField]
+    private string pressureFillContainerName = "\u538b\u529b\u503c";
+
+    [SerializeField]
+    private string pressureFillImageName = "image1";
 
     [SerializeField]
     private string pressureValueTextName = "Text_PresureValue";
@@ -62,7 +71,7 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
     private Slider pressureSlider;
     private Image pressureFillImage;
 
-    private bool missingTimeTextLogged;
+    private bool missingTopLeftScoreTextLogged;
 
     private void Awake()
     {
@@ -131,7 +140,11 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
 
         if (timeLegacyText == null && timeTmpText == null)
         {
-            BindText(timeTextName, out timeLegacyText, out timeTmpText);
+            BindTextUnderContainer(
+                topLeftScoreContainerName,
+                timeTextName,
+                out timeLegacyText,
+                out timeTmpText);
         }
 
         if (pressureValueLegacyText == null && pressureValueTmpText == null)
@@ -146,7 +159,12 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
 
         if (pressureFillImage == null)
         {
-            pressureFillImage = ResolvePressureFillImage(pressureSlider);
+            pressureFillImage = ResolveNamedPressureFillImage();
+
+            if (pressureFillImage == null)
+            {
+                pressureFillImage = ResolvePressureFillImage(pressureSlider);
+            }
         }
     }
 
@@ -199,6 +217,37 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
         }
 
         tmpText = target.GetComponent<TMP_Text>();
+    }
+
+    private void BindTextUnderContainer(
+        string containerName,
+        string objectName,
+        out Text legacyText,
+        out TMP_Text tmpText)
+    {
+        legacyText = null;
+        tmpText = null;
+
+        Transform container = FindDeepChild(runtimeUiRoot, containerName);
+        Transform target = container != null ? FindDeepChild(container, objectName) : null;
+
+        // Compatibility with the previous layout where Text_time was directly under Runtime_UI.
+        if (target == null)
+        {
+            target = FindDeepChild(runtimeUiRoot, objectName);
+        }
+
+        if (target == null)
+        {
+            return;
+        }
+
+        legacyText = target.GetComponent<Text>();
+
+        if (legacyText == null)
+        {
+            tmpText = target.GetComponent<TMP_Text>();
+        }
     }
 
     private T FindComponentInRuntimeUi<T>(string objectName)
@@ -267,6 +316,25 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
         return slider.fillRect.GetComponentInChildren<Image>(true);
     }
 
+    private Image ResolveNamedPressureFillImage()
+    {
+        Transform pressureContainer = FindDeepChild(runtimeUiRoot, pressureFillContainerName);
+
+        if (pressureContainer == null)
+        {
+            return null;
+        }
+
+        Transform fillTransform = FindDeepChild(pressureContainer, pressureFillImageName);
+
+        if (fillTransform == null && NamesMatch(pressureContainer.name, pressureFillImageName))
+        {
+            fillTransform = pressureContainer;
+        }
+
+        return fillTransform != null ? fillTransform.GetComponent<Image>() : null;
+    }
+
     private void RefreshUi()
     {
         if (scoreManager == null)
@@ -280,7 +348,7 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
         {
             SetText(totalScoreLegacyText, totalScoreTmpText, "\u5206\u6570\uff1a--");
             SetText(testLegacyText, testTmpText, "\u76f2\u9053\u5f97\u5206\uff1a--\n\u6263\u5206\u603b\u8ba1\uff1a--");
-            SetText(timeLegacyText, timeTmpText, "\u5df2\u7528\u65f6\u95f4\uff1a--");
+            SetText(timeLegacyText, timeTmpText, "--");
             SetText(pressureValueLegacyText, pressureValueTmpText, "\u538b\u529b\u503c\uff1a--");
             return;
         }
@@ -300,16 +368,16 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
             SetText(
                 timeLegacyText,
                 timeTmpText,
-                $"\u5df2\u7528\u65f6\u95f4\uff1a{scoreManager.ElapsedTime:F1}");
-            missingTimeTextLogged = false;
+                Mathf.RoundToInt(scoreManager.TotalScore).ToString());
+            missingTopLeftScoreTextLogged = false;
         }
-        else if (!missingTimeTextLogged)
+        else if (!missingTopLeftScoreTextLogged)
         {
             Debug.LogWarning(
-                $"ScoreRuntimePanel could not find time text '{timeTextName}'. " +
-                "Please confirm the object exists under Runtime_UI and the scene is saved.",
+                $"ScoreRuntimePanel could not find top-left score text " +
+                $"'{topLeftScoreContainerName}/{timeTextName}'.",
                 this);
-            missingTimeTextLogged = true;
+            missingTopLeftScoreTextLogged = true;
         }
 
         SetText(
@@ -322,21 +390,25 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
 
     private void RefreshPressureSlider()
     {
-        if (pressureSlider == null || scoreManager == null)
+        if (scoreManager == null)
         {
             return;
         }
 
-        pressureSlider.minValue = 0f;
-        pressureSlider.maxValue = scoreManager.MaxLeashPressure;
-        pressureSlider.value = scoreManager.CurrentLeashPressure;
+        if (pressureSlider != null)
+        {
+            pressureSlider.minValue = 0f;
+            pressureSlider.maxValue = scoreManager.MaxLeashPressure;
+            pressureSlider.value = scoreManager.CurrentLeashPressure;
+        }
 
         if (pressureFillImage == null)
         {
             return;
         }
 
-        float normalizedPressure = scoreManager.LeashPressureNormalized;
+        float normalizedPressure = Mathf.Clamp01(scoreManager.LeashPressureNormalized);
+        pressureFillImage.fillAmount = normalizedPressure;
 
         if (normalizedPressure >= dangerThresholdNormalized)
         {

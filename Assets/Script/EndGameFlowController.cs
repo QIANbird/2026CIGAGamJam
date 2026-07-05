@@ -64,6 +64,8 @@ public sealed class EndGameFlowController : MonoBehaviour
 
     private void Awake()
     {
+        ConfigureResultPanelRaycasts();
+
         if (resultPanel != null)
         {
             resultPanel.SetActive(true);
@@ -98,6 +100,7 @@ public sealed class EndGameFlowController : MonoBehaviour
         if (leaderboardPanel != null)
         {
             leaderboardPanel.SetActive(true);
+            leaderboardPanel.transform.SetAsLastSibling();
         }
 
         PopulateLeaderboard(LocalLeaderboardStore.LoadTopEntries());
@@ -110,14 +113,13 @@ public sealed class EndGameFlowController : MonoBehaviour
         SceneManager.LoadScene(startSceneName);
     }
 
-    private void HandleLevelCompleted()
+    public void ShowResults()
     {
         if (completionHandled)
         {
             return;
         }
 
-        completionHandled = true;
         ResolveReferences();
 
         if (scoreManager == null)
@@ -125,6 +127,8 @@ public sealed class EndGameFlowController : MonoBehaviour
             Debug.LogError("EndGameFlowController could not find a ScoreManager.", this);
             return;
         }
+
+        completionHandled = true;
 
         int finalScore = Mathf.RoundToInt(scoreManager.TotalScore);
         int pressureFullCount = scoreManager.LeashPressureFullCount;
@@ -325,6 +329,30 @@ public sealed class EndGameFlowController : MonoBehaviour
             ref scoreEndingTitleLegacyText);
     }
 
+    private void ConfigureResultPanelRaycasts()
+    {
+        if (resultPanel == null)
+        {
+            return;
+        }
+
+        Graphic[] graphics = resultPanel.GetComponentsInChildren<Graphic>(true);
+
+        foreach (Graphic graphic in graphics)
+        {
+            if (graphic == null)
+            {
+                continue;
+            }
+
+            // Decorative images and sibling labels must not intercept button clicks.
+            if (graphic.GetComponentInParent<Selectable>() == null)
+            {
+                graphic.raycastTarget = false;
+            }
+        }
+    }
+
     private static void ResolveTextReference(
         Transform root,
         string objectName,
@@ -360,14 +388,14 @@ public sealed class EndGameFlowController : MonoBehaviour
         }
 
         subscribedLevelManager = levelManager;
-        subscribedLevelManager.LevelCompleted += HandleLevelCompleted;
+        subscribedLevelManager.LevelCompleted += ShowResults;
     }
 
     private void OnDestroy()
     {
         if (subscribedLevelManager != null)
         {
-            subscribedLevelManager.LevelCompleted -= HandleLevelCompleted;
+            subscribedLevelManager.LevelCompleted -= ShowResults;
         }
     }
 }

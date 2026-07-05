@@ -38,6 +38,7 @@ public sealed class UIManager : MonoBehaviour
     private CanvasGroup endUiCanvasGroup;
     private CanvasGroup pauseUiCanvasGroup;
     private Coroutine hidePauseUiCoroutine;
+    private EndGameFlowController endGameFlowController;
 
     private void Awake()
     {
@@ -48,6 +49,7 @@ public sealed class UIManager : MonoBehaviour
 
         CachePauseUiReferences();
         SetPauseUIHidden();
+        endGameFlowController = GetComponent<EndGameFlowController>();
 
         if (endUI != null)
         {
@@ -239,14 +241,33 @@ public sealed class UIManager : MonoBehaviour
         }
 
         endUI.SetActive(true);
+        endUI.transform.SetAsLastSibling();
 
         CacheEndUiReferences();
 
-        if (endUiAnimator == null && endUiCanvasGroup != null)
+        if (endUiCanvasGroup != null)
         {
-            endUiCanvasGroup.alpha = 1f;
+            if (endUiAnimator == null)
+            {
+                endUiCanvasGroup.alpha = 1f;
+            }
+
             endUiCanvasGroup.interactable = true;
             endUiCanvasGroup.blocksRaycasts = true;
+        }
+
+        if (endGameFlowController == null)
+        {
+            endGameFlowController = GetComponent<EndGameFlowController>();
+        }
+
+        if (endGameFlowController != null)
+        {
+            endGameFlowController.ShowResults();
+        }
+        else
+        {
+            Debug.LogError("UIManager requires an EndGameFlowController component.", this);
         }
 
         if (endUiAnimator != null && !string.IsNullOrEmpty(endUiOverTrigger))
