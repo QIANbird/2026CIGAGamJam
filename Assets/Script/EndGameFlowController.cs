@@ -40,6 +40,22 @@ public sealed class EndGameFlowController : MonoBehaviour
     [SerializeField]
     private TMP_Text easterEggTitleText;
 
+    [Header("Ending CG")]
+    [SerializeField]
+    private Image endingCgImage;
+
+    [SerializeField]
+    private Sprite score900OrHigherCg;
+
+    [SerializeField]
+    private Sprite score650To899Cg;
+
+    [SerializeField]
+    private Sprite score400To649Cg;
+
+    [SerializeField]
+    private Sprite scoreBelow400Cg;
+
     private Text finalScoreLegacyText;
     private Text pressureFullCountLegacyText;
     private Text scoreEndingTitleLegacyText;
@@ -177,6 +193,7 @@ public sealed class EndGameFlowController : MonoBehaviour
         }
 
         SetEasterEggTitle(hasEasterEgg);
+        UpdateEndingCg(finalScore);
         LocalLeaderboardStore.AddEntry(GameSession.PlayerId, finalScore, pressureFullCount);
     }
 
@@ -356,6 +373,42 @@ public sealed class EndGameFlowController : MonoBehaviour
         return "绳子打结了";
     }
 
+    private void UpdateEndingCg(int score)
+    {
+        if (endingCgImage == null)
+        {
+            Debug.LogError("EndGameFlowController could not find the ending CG Image.", this);
+            return;
+        }
+
+        Sprite selectedCg;
+
+        if (score >= 900)
+        {
+            selectedCg = score900OrHigherCg;
+        }
+        else if (score >= 650)
+        {
+            selectedCg = score650To899Cg;
+        }
+        else if (score >= 400)
+        {
+            selectedCg = score400To649Cg;
+        }
+        else
+        {
+            selectedCg = scoreBelow400Cg;
+        }
+
+        endingCgImage.sprite = selectedCg;
+        endingCgImage.enabled = selectedCg != null;
+
+        if (selectedCg == null)
+        {
+            Debug.LogWarning($"No ending CG sprite is assigned for score {score}.", this);
+        }
+    }
+
     private void SetEasterEggTitle(bool isVisible)
     {
         if (easterEggTitleText == null)
@@ -392,6 +445,16 @@ public sealed class EndGameFlowController : MonoBehaviour
         if (scoreManager == null)
         {
             scoreManager = FindObjectOfType<ScoreManager>();
+        }
+
+        if (endingCgImage == null && resultPanel != null)
+        {
+            Transform endingCgTransform = FindDeepChild(resultPanel.transform, "Ig_endings");
+
+            if (endingCgTransform != null)
+            {
+                endingCgImage = endingCgTransform.GetComponent<Image>();
+            }
         }
 
         ResolveResultTextReferences();
