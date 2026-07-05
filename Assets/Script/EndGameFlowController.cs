@@ -64,6 +64,7 @@ public sealed class EndGameFlowController : MonoBehaviour
 
     private void Awake()
     {
+        ResolveReferences();
         ConfigureResultPanelRaycasts();
 
         if (resultPanel != null)
@@ -92,6 +93,8 @@ public sealed class EndGameFlowController : MonoBehaviour
 
     public void ShowLeaderboard()
     {
+        ResolveReferences();
+
         if (resultPanel != null)
         {
             resultPanel.SetActive(false);
@@ -121,6 +124,7 @@ public sealed class EndGameFlowController : MonoBehaviour
         }
 
         ResolveReferences();
+        ConfigureResultPanelRaycasts();
 
         if (scoreManager == null)
         {
@@ -149,10 +153,11 @@ public sealed class EndGameFlowController : MonoBehaviour
         }
 
         SetText(finalScoreText, finalScoreLegacyText, finalScore.ToString());
-        SetText(
-            pressureFullCountText,
-            pressureFullCountLegacyText,
-            $"\u538b\u529b\u6b21\u6570\uff1a{pressureFullCount}");
+        string pressureCountValue = pressureFullCountLegacyText != null &&
+                                    pressureFullCountLegacyText.name == "\u538b\u529b\u6b21\u6570"
+            ? pressureFullCount.ToString()
+            : $"\u538b\u529b\u6b21\u6570\uff1a{pressureFullCount}";
+        SetText(pressureFullCountText, pressureFullCountLegacyText, pressureCountValue);
 
         string scoreEndingTitle = GetScoreEndingTitle(finalScore);
         bool hasEasterEgg = pressureFullCount >= EasterEggPressureCount;
@@ -178,6 +183,16 @@ public sealed class EndGameFlowController : MonoBehaviour
     private void PopulateLeaderboard(IReadOnlyList<LocalLeaderboardEntry> entries)
     {
         ClearSpawnedLeaderboardItems();
+
+        if (PopulateStaticLeaderboard(entries))
+        {
+            if (emptyLeaderboardText != null)
+            {
+                emptyLeaderboardText.gameObject.SetActive(entries.Count == 0);
+            }
+
+            return;
+        }
 
         bool canCreateItems = leaderboardContent != null && leaderboardItemTemplate != null;
 
@@ -259,6 +274,68 @@ public sealed class EndGameFlowController : MonoBehaviour
         }
     }
 
+    private bool PopulateStaticLeaderboard(IReadOnlyList<LocalLeaderboardEntry> entries)
+    {
+        if (leaderboardPanel == null)
+        {
+            return false;
+        }
+
+        Transform rankingRoot = FindDeepChild(leaderboardPanel.transform, "\u6392\u540d");
+
+        if (rankingRoot == null)
+        {
+            return false;
+        }
+
+        List<Transform> rows = new List<Transform>();
+
+        for (int index = 0; index < rankingRoot.childCount; index++)
+        {
+            Transform row = rankingRoot.GetChild(index);
+
+            if (row.Find("Name") != null && row.Find("Score") != null)
+            {
+                rows.Add(row);
+            }
+        }
+
+        if (rows.Count == 0)
+        {
+            return false;
+        }
+
+        for (int index = 0; index < rows.Count; index++)
+        {
+            bool hasEntry = index < entries.Count;
+            Transform row = rows[index];
+            row.gameObject.SetActive(hasEntry);
+
+            if (!hasEntry)
+            {
+                continue;
+            }
+
+            LocalLeaderboardEntry entry = entries[index];
+            SetTextComponent(row.Find("Name"), entry.playerId);
+            SetTextComponent(row.Find("Score"), entry.score.ToString());
+        }
+
+        return true;
+    }
+
+    private static void SetTextComponent(Transform target, string value)
+    {
+        if (target == null)
+        {
+            return;
+        }
+
+        TMP_Text tmpText = target.GetComponent<TMP_Text>();
+        Text legacyText = target.GetComponent<Text>();
+        SetText(tmpText, legacyText, value);
+    }
+
     private static string GetScoreEndingTitle(int score)
     {
         if (score >= 900)
@@ -292,6 +369,21 @@ public sealed class EndGameFlowController : MonoBehaviour
 
     private void ResolveReferences()
     {
+        if (runtimeUI == null)
+        {
+            runtimeUI = FindSceneGameObject("Runtime_UI");
+        }
+
+        if (resultPanel == null)
+        {
+            resultPanel = FindSceneGameObject("ResultPannel");
+        }
+
+        if (leaderboardPanel == null)
+        {
+            leaderboardPanel = FindSceneGameObject("LeaderboardPanel");
+        }
+
         if (levelManager == null)
         {
             levelManager = FindObjectOfType<LevelManager>();
@@ -319,7 +411,17 @@ public sealed class EndGameFlowController : MonoBehaviour
             ref finalScoreLegacyText);
         ResolveTextReference(
             resultPanel.transform,
+            "\u5f97\u5206\u6570\u5b57",
+            ref finalScoreText,
+            ref finalScoreLegacyText);
+        ResolveTextReference(
+            resultPanel.transform,
             "T_presureAccount",
+            ref pressureFullCountText,
+            ref pressureFullCountLegacyText);
+        ResolveTextReference(
+            resultPanel.transform,
+            "\u538b\u529b\u6b21\u6570",
             ref pressureFullCountText,
             ref pressureFullCountLegacyText);
         ResolveTextReference(
@@ -377,6 +479,43 @@ public sealed class EndGameFlowController : MonoBehaviour
             legacyText = descendant.GetComponent<Text>();
             return;
         }
+    }
+
+    private static Transform FindDeepChild(Transform parent, string objectName)
+    {
+        if (parent == null)
+        {
+            return null;
+        }
+
+        Transform[] descendants = parent.GetComponentsInChildren<Transform>(true);
+
+        foreach (Transform descendant in descendants)
+        {
+            if (descendant.name == objectName)
+            {
+                return descendant;
+            }
+        }
+
+        return null;
+    }
+
+    private GameObject FindSceneGameObject(string objectName)
+    {
+        GameObject[] gameObjects = Resources.FindObjectsOfTypeAll<GameObject>();
+
+        foreach (GameObject candidate in gameObjects)
+        {
+            if (candidate != null &&
+                candidate.scene == gameObject.scene &&
+                candidate.name == objectName)
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     private void SubscribeToLevelCompleted()
