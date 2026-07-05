@@ -65,6 +65,8 @@ public sealed class DogMovement : MonoBehaviour
     private bool logLeashStateChanges = true;
 
     private readonly HashSet<DogAttractor> activeAttractors = new HashSet<DogAttractor>();
+    private readonly Dictionary<object, float> movementSpeedModifiers =
+        new Dictionary<object, float>();
     private Rigidbody dogRigidbody;
     private Rigidbody ownerRigidbody;
     private Vector2 moveInput;
@@ -193,6 +195,8 @@ public sealed class DogMovement : MonoBehaviour
             }
         }
 
+        desiredVelocity *= GetMovementSpeedMultiplier();
+
         Vector3 limitedVelocity = LimitVelocityByLeash(desiredVelocity);
         SetPlanarVelocity(limitedVelocity);
     }
@@ -210,6 +214,24 @@ public sealed class DogMovement : MonoBehaviour
         if (attractor != null)
         {
             activeAttractors.Remove(attractor);
+        }
+    }
+
+    internal void SetMovementSpeedModifier(object source, float multiplier)
+    {
+        if (source == null)
+        {
+            return;
+        }
+
+        movementSpeedModifiers[source] = Mathf.Clamp01(multiplier);
+    }
+
+    internal void RemoveMovementSpeedModifier(object source)
+    {
+        if (source != null)
+        {
+            movementSpeedModifiers.Remove(source);
         }
     }
 
@@ -248,6 +270,18 @@ public sealed class DogMovement : MonoBehaviour
             currentForwardSpeed,
             targetSpeed,
             response * Time.fixedDeltaTime);
+    }
+
+    private float GetMovementSpeedMultiplier()
+    {
+        float multiplier = 1f;
+
+        foreach (float modifier in movementSpeedModifiers.Values)
+        {
+            multiplier = Mathf.Min(multiplier, modifier);
+        }
+
+        return multiplier;
     }
 
     private void UpdateLeashState()

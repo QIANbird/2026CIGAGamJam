@@ -81,6 +81,7 @@ public sealed class ScoreManager : MonoBehaviour
     private bool ownerPositionInitialized;
 
     public event Action ScoresChanged;
+    public event Action<Transform> ObstacleHit;
 
     public float BlindPathMoveScore => blindPathMoveScore;
     public float AttractorPenaltyTotal => attractorPenaltyTotal;
@@ -347,6 +348,7 @@ public sealed class ScoreManager : MonoBehaviour
 
         obstaclePenaltyTotal += obstaclePenaltyValue;
         NotifyScoresChanged();
+        ObstacleHit?.Invoke(obstacleTransform);
     }
 
     private bool CanScore()
