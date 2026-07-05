@@ -33,26 +33,10 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
     private string pressureFillContainerName = "\u538b\u529b\u503c";
 
     [SerializeField]
-    private string pressureFillImageName = "image1";
+    private string pressureFillImageName = "Image (1)";
 
     [SerializeField]
     private string pressureValueTextName = "Text_PresureValue";
-
-    [Header("\u538b\u529b\u6761\u989c\u8272")]
-    [SerializeField]
-    private Color normalPressureColor = new Color(0.2f, 0.8f, 0.2f, 1f);
-
-    [SerializeField]
-    private Color warningPressureColor = new Color(1f, 0.85f, 0.1f, 1f);
-
-    [SerializeField]
-    private Color dangerPressureColor = new Color(1f, 0.2f, 0.2f, 1f);
-
-    [SerializeField, Range(0f, 1f)]
-    private float warningThresholdNormalized = 0.7f;
-
-    [SerializeField, Range(0f, 1f)]
-    private float dangerThresholdNormalized = 0.9f;
 
     private RectTransform runtimeUiRoot;
 
@@ -98,12 +82,6 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
         {
             scoreManager.ScoresChanged -= RefreshUi;
         }
-    }
-
-    private void OnValidate()
-    {
-        warningThresholdNormalized = Mathf.Clamp01(warningThresholdNormalized);
-        dangerThresholdNormalized = Mathf.Clamp(dangerThresholdNormalized, warningThresholdNormalized, 1f);
     }
 
     private void ResolveScoreManager()
@@ -325,11 +303,22 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
             return null;
         }
 
-        Transform fillTransform = FindDeepChild(pressureContainer, pressureFillImageName);
-
-        if (fillTransform == null && NamesMatch(pressureContainer.name, pressureFillImageName))
+        string[] candidateNames =
         {
-            fillTransform = pressureContainer;
+            "Image (1)",
+            pressureFillImageName,
+            "image1"
+        };
+        Transform fillTransform = null;
+
+        foreach (string candidateName in candidateNames)
+        {
+            fillTransform = FindDeepChild(pressureContainer, candidateName);
+
+            if (fillTransform != null)
+            {
+                break;
+            }
         }
 
         return fillTransform != null ? fillTransform.GetComponent<Image>() : null;
@@ -409,19 +398,6 @@ public sealed class ScoreRuntimePanel : MonoBehaviour
 
         float normalizedPressure = Mathf.Clamp01(scoreManager.LeashPressureNormalized);
         pressureFillImage.fillAmount = normalizedPressure;
-
-        if (normalizedPressure >= dangerThresholdNormalized)
-        {
-            pressureFillImage.color = dangerPressureColor;
-        }
-        else if (normalizedPressure >= warningThresholdNormalized)
-        {
-            pressureFillImage.color = warningPressureColor;
-        }
-        else
-        {
-            pressureFillImage.color = normalPressureColor;
-        }
     }
 
     private static void SetText(Text legacyText, TMP_Text tmpText, string content)
