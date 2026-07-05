@@ -10,6 +10,9 @@ public sealed class UIManager : MonoBehaviour
 
     [Header("Pause Menu")]
     [SerializeField]
+    private GameObject pauseUI;
+
+    [SerializeField]
     private Animator pauseMenuAnimator;
 
     [SerializeField]
@@ -17,6 +20,9 @@ public sealed class UIManager : MonoBehaviour
 
     [SerializeField]
     private string closeTrigger = "close";
+
+    [SerializeField, Min(0f)]
+    private float pauseUiCloseHideDelay = 0.2f;
 
     [Header("Level Complete")]
     [SerializeField]
@@ -30,6 +36,8 @@ public sealed class UIManager : MonoBehaviour
 
     private LevelManager subscribedLevelManager;
     private CanvasGroup endUiCanvasGroup;
+    private CanvasGroup pauseUiCanvasGroup;
+    private Coroutine hidePauseUiCoroutine;
 
     private void Awake()
     {
@@ -37,6 +45,9 @@ public sealed class UIManager : MonoBehaviour
         {
             pauseMenuAnimator.updateMode = AnimatorUpdateMode.UnscaledTime;
         }
+
+        CachePauseUiReferences();
+        SetPauseUIHidden();
 
         if (endUI != null)
         {
@@ -48,6 +59,7 @@ public sealed class UIManager : MonoBehaviour
     private void Start()
     {
         SubscribeToLevelCompleted();
+        StartCoroutine(EnsurePauseUIHiddenAfterAnimatorInitialization());
     }
 
     private void Update()
@@ -60,7 +72,9 @@ public sealed class UIManager : MonoBehaviour
 
     public void TogglePause()
     {
-        if (!TryGetLevelManager(out LevelManager manager) || manager.IsLevelComplete)
+        if (!TryGetLevelManager(out LevelManager manager) ||
+            manager.IsLevelComplete ||
+            manager.IsAwaitingPlayerName)
         {
             return;
         }
@@ -77,10 +91,26 @@ public sealed class UIManager : MonoBehaviour
 
     public void PauseGame()
     {
-        if (!TryGetLevelManager(out LevelManager manager) || manager.IsLevelComplete || manager.IsPaused)
+        if (!TryGetLevelManager(out LevelManager manager) ||
+            manager.IsLevelComplete ||
+            manager.IsAwaitingPlayerName ||
+            manager.IsPaused)
         {
             return;
         }
+
+        if (hidePauseUiCoroutine != null)
+        {
+            StopCoroutine(hidePauseUiCoroutine);
+            hidePauseUiCoroutine = null;
+        }
+
+        if (pauseUI != null)
+        {
+            pauseUI.SetActive(true);
+        }
+
+        SetPauseUIInteraction(true);
 
         manager.PauseGame();
         PlayPauseMenuTrigger(openTrigger, closeTrigger);
@@ -94,26 +124,94 @@ public sealed class UIManager : MonoBehaviour
             return;
         }
 
+        if (manager.IsAwaitingPlayerName)
+        {
+            return;
+        }
+
         manager.ResumeGame();
         PlayPauseMenuTrigger(closeTrigger, openTrigger);
+
+        if (pauseUI != null)
+        {
+            if (hidePauseUiCoroutine != null)
+            {
+                StopCoroutine(hidePauseUiCoroutine);
+            }
+
+            hidePauseUiCoroutine = StartCoroutine(HidePauseUIAfterClose());
+        }
     }
 
     public void LoadMainScene()
     {
         RestoreTimeScaleBeforeSceneChange();
+        GameSession.PrepareForNameInput();
         SceneManager.LoadScene("MainScene");
     }
 
     public void LoadStartScene()
     {
         RestoreTimeScaleBeforeSceneChange();
-        SceneManager.LoadScene("Start Scene");
+        GameSession.PrepareForNameInput();
+        SceneManager.LoadScene("MainScene");
     }
 
     public void RestartLevel()
     {
         RestoreTimeScaleBeforeSceneChange();
+        GameSession.PrepareForNameInput();
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    private System.Collections.IEnumerator HidePauseUIAfterClose()
+    {
+        yield return new WaitForSecondsRealtime(pauseUiCloseHideDelay);
+
+        SetPauseUIHidden();
+
+        hidePauseUiCoroutine = null;
+    }
+
+    private System.Collections.IEnumerator EnsurePauseUIHiddenAfterAnimatorInitialization()
+    {
+        yield return null;
+        SetPauseUIHidden();
+    }
+
+    private void CachePauseUiReferences()
+    {
+        if (pauseUI != null && pauseUiCanvasGroup == null)
+        {
+            pauseUiCanvasGroup = pauseUI.GetComponent<CanvasGroup>();
+        }
+    }
+
+    private void SetPauseUIInteraction(bool isEnabled)
+    {
+        CachePauseUiReferences();
+
+        if (pauseUiCanvasGroup != null)
+        {
+            pauseUiCanvasGroup.interactable = isEnabled;
+            pauseUiCanvasGroup.blocksRaycasts = isEnabled;
+        }
+    }
+
+    private void SetPauseUIHidden()
+    {
+        CachePauseUiReferences();
+
+        if (pauseUiCanvasGroup != null)
+        {
+            pauseUiCanvasGroup.alpha = 0f;
+            pauseUiCanvasGroup.interactable = false;
+            pauseUiCanvasGroup.blocksRaycasts = false;
+        }
+        else if (pauseUI != null)
+        {
+            pauseUI.SetActive(false);
+        }
     }
 
     private void SubscribeToLevelCompleted()

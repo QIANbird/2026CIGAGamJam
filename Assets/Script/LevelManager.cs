@@ -13,13 +13,15 @@ public sealed class LevelManager : MonoBehaviour
 
     public bool IsLevelComplete { get; private set; }
     public bool IsPaused { get; private set; }
+    public bool IsAwaitingPlayerName { get; private set; }
 
     public event Action LevelCompleted;
 
     private void Awake()
     {
-        IsPaused = false;
-        Time.timeScale = 1f;
+        IsAwaitingPlayerName = GameSession.RequiresPlayerNameInput;
+        IsPaused = IsAwaitingPlayerName;
+        Time.timeScale = IsAwaitingPlayerName ? 0f : 1f;
     }
 
     private void Start()
@@ -43,7 +45,9 @@ public sealed class LevelManager : MonoBehaviour
         }
 
         IsLevelComplete = true;
-        ResumeGame();
+        IsAwaitingPlayerName = false;
+        IsPaused = false;
+        Time.timeScale = 1f;
         Debug.Log("Level Complete", this);
 
         if (dogMovement != null)
@@ -61,7 +65,7 @@ public sealed class LevelManager : MonoBehaviour
 
     public void PauseGame()
     {
-        if (IsLevelComplete || IsPaused)
+        if (IsLevelComplete || IsAwaitingPlayerName || IsPaused)
         {
             return;
         }
@@ -72,6 +76,23 @@ public sealed class LevelManager : MonoBehaviour
 
     public void ResumeGame()
     {
+        if (IsAwaitingPlayerName)
+        {
+            return;
+        }
+
+        IsPaused = false;
+        Time.timeScale = 1f;
+    }
+
+    public void BeginLevel()
+    {
+        if (IsLevelComplete)
+        {
+            return;
+        }
+
+        IsAwaitingPlayerName = false;
         IsPaused = false;
         Time.timeScale = 1f;
     }

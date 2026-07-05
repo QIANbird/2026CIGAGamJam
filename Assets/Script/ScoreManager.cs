@@ -68,6 +68,9 @@ public sealed class ScoreManager : MonoBehaviour
     [SerializeField, InspectorName("\u5f53\u524d\u538b\u529b\u503c")]
     private float leashPressure;
 
+    [SerializeField, InspectorName("\u538b\u529b\u6ee1\u503c\u6b21\u6570")]
+    private int leashPressureFullCount;
+
     [SerializeField, InspectorName("\u4e3b\u4eba\u5f53\u524d\u901f\u5ea6\uff08\u8c03\u8bd5\uff09")]
     private float ownerPlanarSpeed;
 
@@ -88,6 +91,7 @@ public sealed class ScoreManager : MonoBehaviour
     public float TotalScore => blindPathMoveScore - PenaltyTotal;
     public float CurrentLeashPressure => leashPressure;
     public float MaxLeashPressure => leashPressureMax;
+    public int LeashPressureFullCount => leashPressureFullCount;
     public float LeashPressureNormalized =>
         leashPressureMax <= Mathf.Epsilon ? 0f : leashPressure / leashPressureMax;
 
@@ -116,6 +120,7 @@ public sealed class ScoreManager : MonoBehaviour
         leashPressureIncreasePerSecond = Mathf.Max(0f, leashPressureIncreasePerSecond);
         leashPressureDecreasePerSecond = Mathf.Max(0f, leashPressureDecreasePerSecond);
         leashPressure = Mathf.Clamp(leashPressure, 0f, leashPressureMax);
+        leashPressureFullCount = Mathf.Max(0, leashPressureFullCount);
 
         if (Application.isPlaying)
         {
@@ -308,6 +313,7 @@ public sealed class ScoreManager : MonoBehaviour
         if (nextPressure >= leashPressureMax)
         {
             leashPenaltyTotal += leashPressurePenaltyValue;
+            leashPressureFullCount++;
             leashPressure = 0f;
             return true;
         }
